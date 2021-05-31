@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="goods">
+    <!--开启了二级缓存
+        eviction是缓存的清除策略,当缓存对象数量达到上限后,自动触发对应算法对缓存对象清除
+            1.LRU – 最近最久未使用:移除最长时间不被使用的对象。
+            O1 O2 O3 O4 .. O512
+            14 99 83 1     893
+            2.FIFO – 先进先出:按对象进入缓存的顺序来移除它们。
+            3.SOFT – 软引用:移除基于垃圾收集器状态和软引用规则的对象。
+            4.WEAK – 弱引用:更积极的移除基于垃圾收集器状态和弱引用规则的对象。
+    -->
+    <cache eviction="LRU" flushInterval="600000" size="512" readOnly="true"/>
+    <select id="selectAll" resultType="com.McT.mybatis.entity.Goods" useCache="false">
+        select * from t_goods order by goods_id desc limit 10
+    </select>
+
+    <select id="selectById" parameterType="Integer" resultType="com.McT.mybatis.entity.Goods">
+        select * from t_goods where goods_id = #{value}
+    </select>
+
+    <select id="selectByPriceRange" parameterType="java.util.Map" resultType="com.McT.mybatis.entity.Goods">
+        select * from t_goods
+        where current_price between #{min} and #{max}
+        order by current_price desc
+        limit #{limit}
+    </select>
+
+    <select id="selectGoodsMap" resultType="java.util.LinkedHashMap">
+        select g.*, c.category_name
+        from t_goods g, t_category c
+        where g.category_id = c.category_id
+        limit 10
+    </select>
+
+    <resultMap id="rmGoods" type="com.McT.mybatis.dto.GoodsDTO">
+        <id column="goods_id" property="goods.goodsId"></id>
+
+        <result property="goods.title" column="title"></result>
+        <result property="goods.originalCost" column="original_cost"></result>
+        <result property="goods.currentPrice" column="current_price"></result>
+        <result property="goods.discount" column="discount"></result>
+        <result property="goods.isFreeDelivery" column="is_free_delivery"></result>
+        <result property="goods.categoryId" column="category_id"></result>
+        <result property="category.categoryId" column="category_id"></result>
+        <result property="category.categoryName" column="category_name"></result>
+        <result property="category.parentId" column="parent_id"></result>
+        <result property="category.categoryLevel" column="category_level"></result>
+        <result property="category.categoryOrder" column="category_order"></result>
+
+        <result property="test" column="test"/>
+    </resultMap>
+    <select id="selectGoodsDTO" resultMap="rmGoods">
+        select g.*, c.*, "1" as test
+        from t_goods g, t_category c
+        where g.category_id = c.category_id
+        limit 10
+    </select>
+
+    <update id="update" parameterType="com.McT.mybatis.entity.Goods" flushCache="true">
+        UPDATE t_goods
+        SET title=#{title}, sub_title=#{subTitle}, original_cost=#{originalCost}, current_price=#{currentPrice}, discount=#{discount}, is_free_delivery=#{isFreeDelivery}, category_id=#{categoryId}
+        WHERE goods_id=#{goodsId}
+    </update>
+
+    <delete id="delete" parameterType="Integer">
+        delete from t_goods
+        where goods_id=#{value}
+    </delete>
+
+    <select id="dynamicSQL" parameterType="java.util.Map" resultType="com.McT.mybatis.entity.Goods">
+        select * from t_goods
+        <where>
+            <if test="categoryId != null">
+                and category_id = #{categoryId}
+            </if>
+            <if test="currentPrice !=null">
+                and current_price &lt; #{currentPrice}
+            </if>
+        </where>
+    </select>
+
+<!--    one to many 对象关联查询-->
+    <resultMap id="rmGoods1" type="com.McT.mybatis.entity.Goods">
+        <id column="goods_id" property="goodsId"></id>
+        <collection property="goodsDetails" select="goodsDetail.selectByGoodsId" column="goods_id"/>
+    </resultMap>
+    <select id="selectOneToMany" resultMap="rmGoods1">
+        select * from t_goods limit 10
+    </select>
+
+    <select id="selectPage" resultType="com.McT.mybatis.entity.Goods">
+        select * from t_goods where current_price &lt; 1000
+    </select>
+
+    <insert id="batchInsert" parameterType="java.util.List">
+        INSERT INTO t_goods(title, sub_title, original_cost, current_price, discount, is_free_delivery, category_id)
+        VALUES
+        <foreach collection="list" item="item" index="index" separator=",">
+            (#{item.title}, #{item.subTitle}, #{item.originalCost}, #{item.currentPrice}, #{item.discount}, #{item.isFreeDelivery}, #{item.categoryId})
+        </foreach>
+    </insert>
+
+    <delete id="batchDelete" parameterType="java.util.List">
+        DELETE FROM t_goods WHERE goods_id IN
+        <foreach collection="list" index="index" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </delete>
+</mapper>

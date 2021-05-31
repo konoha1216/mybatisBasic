@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="student">
+    <select id="selectAll" resultType="com.McT.mybatis.entity.Student">
+        select * from student order by id
+    </select>
+
+    <insert id="insert" parameterType="com.McT.mybatis.entity.Student">
+        INSERT INTO student(reg_no, name, sex, age, grade, major)
+        Values (#{regNo}, #{name}, #{sex}, #{age}, #{grade}, #{major})
+        <selectKey resultType="Integer" keyProperty="id" order="AFTER">
+            select last_insert_id()
+        </selectKey>
+    </insert>
+
+    <select id="dynamicSQL" parameterType="java.util.Map" resultType="com.McT.mybatis.entity.Student">
+        select * from student
+        <where>
+            <if test="age!=null">
+                and age &gt; #{age}
+            </if>
+            <if test="sex!=null">
+                and sex = #{sex}
+            </if>
+        </where>
+    </select>
+</mapper>
